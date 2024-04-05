@@ -1,6 +1,7 @@
 import torch
 import colorednoise
 from arm_pytorch_utilities import handle_batch_input
+from tqdm import tqdm
 
 import logging
 
@@ -122,7 +123,7 @@ class iCEM:
             return torch.stack(x[:-1], dim=1)
         return torch.stack(x[1:], dim=1)
 
-    def command(self, state, shift_nominal_trajectory=True, return_full_trajectories=False, **kwargs):
+    def command(self, state, shift_nominal_trajectory=True, return_full_trajectories=False, progress_bar=False, **kwargs):
         if not torch.is_tensor(state):
             state = torch.tensor(state, device=self.device, dtype=self.dtype)
         x = state
@@ -144,7 +145,12 @@ class iCEM:
 
         # Shift the keep elites
 
-        for i in range(iterations):
+        if progress_bar:
+            its = tqdm(range(iterations))
+        else:
+            its = range(iterations)
+
+        for i in its:
             if self.kept_elites is None:
                 # Sample actions
                 U = self.sample_action_sequences(x, self.N)
