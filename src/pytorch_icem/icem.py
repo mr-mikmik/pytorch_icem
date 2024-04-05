@@ -26,6 +26,7 @@ class iCEM:
                  warmup_iters=100, online_iters=100,
                  includes_x0=False,
                  fixed_H=True,
+                 step_dependent_dynamics=False,
                  device="cpu"):
 
         self.dynamics = dynamics
@@ -47,6 +48,7 @@ class iCEM:
         self.sigma = sigma
         self.dtype = self.sigma.dtype
 
+        self.step_dependency = step_dependent_dynamics
         self.warmup_iters = warmup_iters
         self.online_iters = online_iters
         self.includes_x0 = includes_x0
@@ -104,8 +106,8 @@ class iCEM:
         # return self.problem.objective(xu)
 
     @handle_batch_input(n=2)
-    def _dynamics(self, x, u):
-        return self.dynamics(x, u)
+    def _dynamics(self, x, u, t):
+        return self.dynamics(x, u, t) if self.step_dependency else self.dynamics(x, u)
 
     def _rollout_dynamics(self, x0, u):
         N, H, du = u.shape
@@ -114,7 +116,7 @@ class iCEM:
 
         x = [x0.reshape(1, self.nx).repeat(N, 1)]
         for t in range(self.H):
-            x.append(self._dynamics(x[-1], u[:, t]))
+            x.append(self._dynamics(x[-1], u[:, t], t))
 
         if self.includes_x0:
             return torch.stack(x[:-1], dim=1)
